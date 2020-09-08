@@ -1,0 +1,112 @@
+from py2neo import Graph, Relationship, Node
+
+
+class neo4j_test_class:
+    """用于关系的生成及节点查找
+    :param graph Graph对象
+    """
+
+    def __init__(self, graph=Graph):
+        self.graph = graph
+
+    def create_Work_in_relationship(self, a=Node, b=Node):
+        """设置两个节点为从属 及管理关系
+        :param a 起始节点
+        :param b 终点节点Node
+        :return True if success
+        """
+        Work_in = Relationship.type('Work_in')
+        Govern = Relationship.type('Govern')
+        r = Work_in(a, b)
+        r_1 = Govern(b, a)
+        self.graph.create(r | r_1)
+        return True
+
+    def name_node_find(self, name_str=str):
+        """通过名字查找节点
+        :param:name_str:名字
+        :return:节点
+        """
+        a = self.graph.run('match (a)where a.{}="{}" return a'.format('name', name_str)).evaluate()
+        return a
+
+    def property_node_find(self, property_name=str, property_value=str):
+        """通过属性查找节点
+        :param:property_name:属性名
+        ：property_value：属性值
+        :return:节点
+        """
+        a = self.graph.run('match (a)where a.{}="{}" return a'.format(property_name, property_value)).evaluate()
+        return a
+
+    def create_relationship_between(self, name_one=str, name_two=str, rel_1=str, rel_2=None):
+        """用于搜寻已经存在的两个节点，并建立关系
+        :param name_one 起始节点的name属性值
+        :param name_two 终点节点的name属性值
+        :param rel_1 起始节点到终点节点的关系
+        :param rel_2 终点节点到起始节点的关系
+        :return True if success
+        """
+        a = self.name_node_find(name_one)
+        b = self.name_node_find(name_two)
+        r = Relationship(a, rel_1, b)
+        if rel_2 is None:
+            self.graph.create(r)
+        else:
+            r_1 = Relationship(b, rel_2, a)
+            self.graph.create(r | r_1)
+        return True
+
+    def create_relationship_between_node(self, a=Node, b=Node, rel_1=str, rel_2=None):
+        """节点之间建立关系
+        :param a:  tart node
+        :param b: end node
+        :param rel_1 起始节点到终点节点的关系
+        :param rel_2 终点节点到起始节点的关系
+        """
+        r = Relationship(a, rel_1, b)
+        if rel_2 is None:
+            self.graph.create(r)
+        else:
+            r_1 = Relationship(b, rel_2, a)
+            self.graph.create(r | r_1)
+        return True
+
+    def set_property_for_searchnode(self, name=str, property_name=str, property_value=str):
+        """设置节点属性
+        :param name 节点名称(name属性值)
+        :param property_name:属性的名称及属性值
+        :param property_value: 属性的名称及属性值
+        :return True if success
+        """
+        self.graph.run('match (a)where a.name="{}" set a.{}="{}"'.format(name, property_name, property_value))
+        return True
+
+    def set_property_for_searchrel(self, name_one=str, name_two=str, property_name=str, property_value=str):
+        """设置关系属性,关系通过起始及终点节点区分方向
+        :param name_two:
+        :param name_one name_two起始及终点节点的name属性值
+        :param property_name、property_value属性的名称及属性值
+        :return True if success
+        """
+        if self.graph.run(
+                'match (a)-[r]->(b) where a.name="{}" and b.name="{}" return r'.format(name_one, name_two)).data():
+            self.graph.run(
+                'match (a)-[r]->(b) where a.name="{}" and b.name="{}" set r.{}="{}"'.format(name_one, name_two,
+                                                                                            property_name,
+                                                                                            property_value))
+        else:
+            print('They do not have any relationship!')
+        return True
+
+    def add_node(self, name=str, label='Person', index=None):
+        """
+        通过该方法建立的节点只带一个name属性
+        :param label:
+        :param name属性name值
+        :param index预留索引属性值
+        :return True if success
+        """
+        n = Node(label, name=name)
+        self.graph.create(n)
+        return True
