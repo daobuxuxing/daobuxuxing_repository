@@ -69,5 +69,5 @@ class staffRegisterOnGraph:
 
 if __name__ == '__main__':
     neo = Graph('http://localhost:7474/browser/', user='neo4j',
-                password='123456')
+                password='****')
     test = staffRegisterOnGraph(neo)
