@@ -41,21 +41,23 @@ class registerOnGraph:
         self.allteam = allteam
 
     # 每次传入两个name值，一个用于nameIdDict ，另一个更新属性
-    def createNode(self, namefordict, *label, **property):
+    def createNode(self, namefordict, label=list, property=dict):
         ID = self.yourId
+        property[namefordict] = ID
         label, property = self.getLabelProperty(ID, label, property)
-        self.neo.run('create (n:{} {})'.format(label, property))
+        n = self.neo.run('create (n:{} {}) return n'.format(label, property))
         self.nameIdDict[namefordict] = ID
-        return ID
+        return n.data()
 
-    def createRelation(self, namefordict, startnodeid, endnodeid, *label, **property):
+    def createRelation(self, namefordict, startnodeid, endnodeid, label=list, property=dict):
         ID = self.yourId
+        property[namefordict] = ID
         label, property = self.getLabelProperty(ID, label, property)
         relpara = label + property
-        self.neo.run('match (a{{ ID:{} }}), (b{{ ID:{} }}) '
-                     'create (a)-[:{}]->(b)'.format(startnodeid, endnodeid, relpara))
+        r = self.neo.run('match (a{{ ID:{} }}), (b{{ ID:{} }}) create (a)-[r:{}]'
+                     '->(b) return r'.format(startnodeid, endnodeid, relpara))
         self.nameIdDict[namefordict] = ID
-        return True
+        return r.data()
 
     # 用于关键字搜索
     def idSearch(self, name):
@@ -75,8 +77,8 @@ class registerOnGraph:
     def getLabelProperty(id, label, property):
         # 整理属性
         temp = '{ID:' + '"' + str(id) + '"'
-        for i, j in enumerate(property):
-            temp += str(j) + ':"' + str(i) + '" ,'
+        for i, j in property.items():
+            temp += str(i) + ':"' + str(j) + '" ,'
         property = temp[:-1] + '}'
         # 整理标签
         la = ''
@@ -100,7 +102,7 @@ class userApi:
 
 if __name__ == '__main__':
     neo = Graph('http://localhost:7474/browser/', user='neo4j',
-                password='compress Rubber parsing 38')
+                password='****')
     allteam = allTeam()
     test = registerOnGraph(allteam, neo)
 
