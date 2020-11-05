@@ -1,0 +1,70 @@
+class registerOnGraph:
+    def __init__(self, neo=Graph):
+        # 为每个成员分配Id
+        self.iddNum = 1
+        # 为所有的节点保存name属性及ID
+        self.nameIdDict = {}
+        self.neo = neo
+
+    # 每次传入两个name值，一个用于nameIdDict ，另一个更新属性
+    def createNode(self, namefordict, label=list, property=dict):
+        ID = self.yourId
+        label, property = self.getLabelProperty(ID, label, property)
+        n = self.neo.run('create (n {} {}) return n'.format(label, property)).data()
+        self.nameIdDict[namefordict] = ID
+        return n
+
+    def createRelation(self, startnodeid, endnodeid, label=list, property=dict):
+        ID = self.yourId
+        label, property = self.getLabelProperty(ID, label, property)
+        relpara = label + property
+        pattern = 'match (a{{ ID:"{}" }}), (b{{ ID:"{}" }}) create (a)-[r {}]->(b) return r'.format(startnodeid,
+                                                                                                    endnodeid, relpara)
+        r = self.neo.run(pattern).data()
+        return r
+
+    # 用于关键字搜索
+    def idSearch(self, name):
+        temp = []
+        for i in self.nameIdDict.keys():
+            if name in i:
+                temp.append(self.nameIdDict[i])
+        return temp
+
+    def deleteNode(self, name):
+        id = self.nameIdDict.get(name)
+        if messagebox.askyesno(title='彻底删除节点', message='将从数据库中彻底删除这个节点，及与他相关的数据。'):
+            if id:
+                r = self.neo.run('match ()-[r]-(n{{ ID:{} }}) delete r,n'.format(id)).data()
+                return r
+        return 'False'
+
+    def searchPatern(self, firstnodeid=None, secondnodeid=None):
+        if firstnodeid and secondnodeid:
+            path = self.neo.run(
+                'match p=(a{{ ID:"{}" }})-[r]-(b{{ ID:"{}" }}) return p'.format(firstnodeid, secondnodeid)).data()
+            return path
+        else:
+            # 节点搜索
+            n = self.neo.run('match (n{{ ID:"{}" }}) return n').data()
+            return n
+
+    @property
+    def yourId(self):
+        Id = self.iddNum
+        self.iddNum += 1
+        return Id
+
+    @staticmethod
+    def getLabelProperty(id, label, property):
+        # 整理属性
+        temp = '{ID:' + '"' + str(id) + '",'
+        for i, j in property.items():
+            temp += str(i) + ':"' + str(j) + '" ,'
+        property = temp[:-1] + '}'
+        # 整理标签
+        la = ''
+        for i in label:
+            la += ':' + i + ' '
+        label = la
+        return label, property
