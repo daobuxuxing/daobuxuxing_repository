@@ -9,6 +9,8 @@ class registerOnGraph:
     # 每次传入两个name值，一个用于nameIdDict ，另一个更新属性
     def createNode(self, namefordict, label=list, property=dict):
         ID = self.yourId
+        date = datetime.date.today()
+        property['生成时间'] = str(date)
         label, property = self.getLabelProperty(ID, label, property)
         n = self.neo.run('create (n {} {}) return n'.format(label, property)).data()
         self.nameIdDict[namefordict] = ID
@@ -16,6 +18,13 @@ class registerOnGraph:
 
     def createRelation(self, startnodeid, endnodeid, label=list, property=dict):
         ID = self.yourId
+        date = datetime.date.today()
+        property['生成时间'] = str(date)
+        if not label:
+            label.append('关联')
+        else:
+            label = [label[0]]
+        # 关系属性只能有一个
         label, property = self.getLabelProperty(ID, label, property)
         relpara = label + property
         pattern = 'match (a{{ ID:"{}" }}), (b{{ ID:"{}" }}) create (a)-[r {}]->(b) return r'.format(startnodeid,
@@ -35,19 +44,25 @@ class registerOnGraph:
         id = self.nameIdDict.get(name)
         if messagebox.askyesno(title='彻底删除节点', message='将从数据库中彻底删除这个节点，及与他相关的数据。'):
             if id:
-                r = self.neo.run('match ()-[r]-(n{{ ID:{} }}) delete r,n'.format(id)).data()
+                r = self.neo.run('match (n{{ ID:"{}" }}) delete n'.format(id)).data()
                 return r
-        return 'False'
+        return False
 
     def searchPatern(self, firstnodeid=None, secondnodeid=None):
         if firstnodeid and secondnodeid:
-            path = self.neo.run(
-                'match p=(a{{ ID:"{}" }})-[r]-(b{{ ID:"{}" }}) return p'.format(firstnodeid, secondnodeid)).data()
-            return path
+            sentence = 'match p=(a{{ ID:"{}" }})-[r]-(b{{ ID:"{}" }}) return p'.format(firstnodeid, secondnodeid)
+            path = self.neo.run(sentence).data()
+            return path, sentence
         else:
-            # 节点搜索
-            n = self.neo.run('match (n{{ ID:"{}" }}) return n').data()
-            return n
+            # 节点所有关系搜索
+            # use secondnodid
+            sentence = 'match p=(n{{ ID:"{}" }})-[]-() return p'.format(secondnodeid)
+            n = self.neo.run(sentence).data()
+            return n, sentence
+
+    def addNodeProperty(self, nodeid=None, propertykey=None, propertyvalue=None):
+        n = self.neo.run('match (n{{ID:"{}" }}) set n.{} = "{}"  return n'.format(nodeid, propertykey, propertyvalue)).data()
+        return n
 
     @property
     def yourId(self):
@@ -68,3 +83,4 @@ class registerOnGraph:
             la += ':' + i + ' '
         label = la
         return label, property
+
